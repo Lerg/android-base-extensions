@@ -2,6 +2,7 @@
 
 import urllib
 import zipfile
+import re
 import os
 import sys
 import shutil
@@ -14,29 +15,37 @@ from subprocess import call
 from argparse import ArgumentParser
 from contextlib import contextmanager
 
+
 def makedirs(path):
     if not os.path.exists(path):
         os.makedirs(path)
+
 
 def cleardirs(path):
     if os.path.exists(path):
         shutil.rmtree(path)
     os.makedirs(path)
 
+
 def get_project_dir(args):
     return os.path.join(args.out, args.project_name)
+
 
 def get_extension_dir(args):
     return os.path.join(get_project_dir(args), args.project_name)
 
+
 def get_lib_dir(args):
     return os.path.join(get_extension_dir(args), "lib", "android")
+
 
 def get_manifest_dir(args):
     return os.path.join(get_extension_dir(args), "manifests", "android")
 
+
 def get_res_dir(args):
     return os.path.join(get_extension_dir(args), "res", "android", "res")
+
 
 def get_src_dir(args):
     return os.path.join(get_extension_dir(args), "src")
@@ -46,11 +55,13 @@ def javac(file):
     javac = "javac -source 1.7 -target 1.7 %s" % (file)
     call(javac, shell=True)
 
+
 def get_element_value(element):
     if element and element.childNodes:
         return element.childNodes[0].nodeValue
     else:
         return None
+
 
 def get_child_element(xml_document, tag_name):
     if xml_document is None:
@@ -60,9 +71,11 @@ def get_child_element(xml_document, tag_name):
             return child
     return None
 
+
 def get_child_value(xml_document, tag_name):
     child = get_child_element(xml_document, tag_name)
     return get_element_value(child)
+
 
 def get_xml_elements(xml_document, tag_name):
     if xml_document and xml_document.getElementsByTagName(tag_name):
@@ -76,6 +89,7 @@ def get_xml_element(xml_document, tag_name, index=0):
         return xml_document.getElementsByTagName(tag_name)[index]
     else:
         return None
+
 
 def get_xml_value(xml_document, tag_name, default=None):
     if xml_document and xml_document.getElementsByTagName(tag_name):
@@ -97,6 +111,23 @@ def prettify_xml(xml_document):
     reparsed = parseString(xml_document.toxml())
     return '\n'.join([line for line in reparsed.toprettyxml(indent=' '*2, encoding="utf-8").split('\n') if line.strip()])
 
+
+def dump_file(file):
+    with open(file, "r") as f:
+        print(file, f.read())
+
+
+def replace_in_file(filename, old, new, flags=None):
+    with open(filename) as f:
+        if flags is None:
+            content = re.sub(old, new, f.read())
+        else:
+            content = re.sub(old, new, f.read(), flags=flags)
+
+    with open(filename, "w") as f:
+        f.write(content)
+
+
 EMPTY_MANIFEST = (
     '<?xml version="1.0" encoding="utf-8"?>\n'
     '<manifest\n'
@@ -114,9 +145,12 @@ def create_empty_manifest(filename):
     with open(filename, "w") as file:
         file.write(EMPTY_MANIFEST)
 
-def merge_manifest_files(src_manifest_name, dst_manifest_name, name):
+
+def merge_manifest_files(src_manifest_name, dst_manifest_name):
+    replace_in_file(src_manifest_name, r"\$\{applicationId\}", r"{{android.package}}")
     manifest_merger = "java -jar manifest-merger.jar --main %s --libs %s --out %s" % (dst_manifest_name, src_manifest_name, dst_manifest_name)
     call(manifest_merger, shell=True)
+
 
 @contextmanager
 def tmpdir():
@@ -251,14 +285,14 @@ def process_aar(name, aar_file, args, manifest_file):
         # merge manifest
         android_manifest = os.path.join(zip_dir, "AndroidManifest.xml")
         if os.path.exists(android_manifest):
-            merge_manifest_files(android_manifest, manifest_file, name)
-            # shutil.copy(android_manifest, os.path.join(".", name + "-AndroidManifest.xml"))
+            merge_manifest_files(android_manifest, manifest_file)
 
         # copy proguard file
         proguard_txt = os.path.join(zip_dir, "proguard.txt")
         if os.path.exists(proguard_txt):
             manifest_dir = get_manifest_dir(args)
             shutil.copy(proguard_txt, os.path.join(manifest_dir, name + ".pro"))
+
 
 #
 # Process a single dependency
@@ -290,6 +324,7 @@ def process_dependencies(dependencies, args, exceptions):
     manifest_file = os.path.join(get_manifest_dir(args), "AndroidManifest.xml")
     if os.path.exists(manifest_file):
         os.remove(manifest_file)
+
     create_empty_manifest(manifest_file)
 
     for name, data in dependencies.iteritems():
@@ -375,6 +410,7 @@ def get_pom_element(pom_url, tag_name):
     else:
         return None
 
+
 #
 # Get a value from a POM
 # This will take inheritance into consideration by first looking at any parent POMs
@@ -387,6 +423,7 @@ def get_pom_value(pom_url, tag_name, default=None):
     else:
         value = default
     return value
+
 
 #
 # Recursivley process POM files adding each to the output dictionary
@@ -441,6 +478,7 @@ def process_pom(pom_url, parent_id, dependencies_out):
             else:
                 print("  Ignoring artifact dependency '{}' with scope '{}'".format(dependency_artifact_id, dependency_scope))
 
+
 def read_exceptions(exps):
     result = None
     if exps:
@@ -457,6 +495,7 @@ def read_exceptions(exps):
                 print("File {} do not exist".format(path))
                 os._exit(1)
     return result
+
 
 #
 # Process a list of POMs
