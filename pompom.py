@@ -145,7 +145,10 @@ def zip_dir(zipfile_name, dir, base_dir):
     for root, dirs, files in os.walk(dir):
         for file in files:
             filename = os.path.join(root, file)
-            zipf.write(filename, filename.replace(base_dir, ""))
+            arcname = filename
+            if base_dir and arcname.startswith(base_dir + "/"):
+                arcname = arcname[len(base_dir) + 1:]
+            zipf.write(filename, arcname)
     zipf.close()
 
 
@@ -505,6 +508,7 @@ def clear_project(args):
 
 
 def zip_project(args):
+    print("\nZipping project {} to {}".format(args.project_name, args.project_name + ".zip"))
     zip_file = os.path.join(args.out, args.project_name + ".zip")
     if os.path.exists(zip_file):
         os.remove(zip_file)
@@ -561,6 +565,7 @@ for command in args.commands:
             print("File %s does not exist" % (deps_file))
             sys.exit(1)
         clear_project(args)
+        create_project(args)
         with open(deps_file, "r") as file:
             dependencies = json.loads(file.read())
             process_dependencies(dependencies, args, exceptions)
