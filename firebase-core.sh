@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 python pompom.py \
-	--project-name firebase_core-16.0.7 \
+	--project-name firebase-core-16.0.7 \
 	--pom https://maven.google.com/com/google/firebase/firebase-core/16.0.7/firebase-core-16.0.7.pom \
 	--exclude out/gps-base-16.0.1/dependencies.json \
 	--exclude out/gps-ads-17.2.1/dependencies.json \
