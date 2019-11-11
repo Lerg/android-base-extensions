@@ -141,15 +141,7 @@ def add_to_zip(zipfile_name, file_to_add, path_in_zip):
 
 
 def zip_dir(zipfile_name, dir, base_dir):
-    zipf = zipfile.ZipFile(zipfile_name, 'w', zipfile.ZIP_DEFLATED)
-    for root, dirs, files in os.walk(dir):
-        for file in files:
-            filename = os.path.join(root, file)
-            arcname = filename
-            if base_dir and arcname.startswith(base_dir + "/"):
-                arcname = arcname[len(base_dir) + 1:]
-            zipf.write(filename, arcname)
-    zipf.close()
+    shutil.make_archive(zipfile_name, "zip", dir)
 
 
 def download_file(url, destination):
@@ -509,10 +501,11 @@ def clear_project(args):
 
 def zip_project(args):
     print("\nZipping project {} to {}".format(args.project_name, args.project_name + ".zip"))
-    zip_file = os.path.join(args.out, args.project_name + ".zip")
+    zip_filename = os.path.join(args.out, args.project_name)
+    zip_file = zip_filename + ".zip"
     if os.path.exists(zip_file):
         os.remove(zip_file)
-    zip_dir(zip_file, get_project_dir(args), args.out)
+    zip_dir(zip_filename, get_project_dir(args), args.out)
 
 
 def add_argument(parser, short, long, dest, help, default=None, required=False, action="store"):
